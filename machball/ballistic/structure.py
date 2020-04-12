@@ -1,5 +1,7 @@
-import numpy as np
+#Copyright 2019 Argonne UChicago LLC
+#This file is part of MachBall
 
+import numpy as np
 
 class Structure:
     """A Structure is just an array of areas and view factors. It
@@ -11,7 +13,10 @@ class Structure:
         self.N = len(areas)
         self.areas = areas
         self.qij = qij
-        self.regions = regions
+        if regions == None:
+            self.regions = {}
+        else:
+            self.regions = copy(regions)
 
     def region(self, name):
         return self.regions[name]
