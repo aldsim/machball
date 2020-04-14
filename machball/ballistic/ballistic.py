@@ -1,3 +1,5 @@
+#Copyright 2013 Argonne UChicago LLC
+#This file is part of Machball
 """
 Solve the ballistic transport inside nanostructures using the
 Markov chain approach
@@ -6,24 +8,38 @@ Markov chain approach
 
 import numpy as np
 
-def solve_constant(st, beta0):
+def solve_constant(st, beta0, entrypoints=[0]):
     """
-    Solve the steady state reactive transport for a constant reaction probability beta0
+    Solve the steady state reactive transport for a constant reaction probability.
 
-    st is a Structure. The algorithm assumes that the opening is located at index 0
-    beta0 is either a constant or an array of size N-1, where N is the number of
-    discrete regions in the structure.
+    Parameters
+    ----------
+        st : Structure
+            nanostructure in which the ballistic transport takes place
+        beta0 : float
+            sticking probability.
+        entrypoint : [Int], optional
+            entry points in the structure
+
+    Returns
+    -------
+        np.array
+            1D array representing the outcome probabilities (transients=False)
+            or the wall flux normalized to the entry area (transients=True)
+
     """
 
-    sprobs = np.ones(st.N)
-    sprobs[1:] = beta0
-    return ballistic_markov(sprobs, st, [0])
+    sprobs = beta0*np.ones(st.N)
+    for i in entrypoints:
+        sprobs[i] = 1.0
+    return ballistic_markov(sprobs, st, entrypoints, transients=False)
 
 
-def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05):
+def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
+        verbose=True, return_betaeff=False):
     """
-    Solve the time-dependent ALD growth inside a nanostructure st with two
-    surface components.
+    Solve the reactive transport inside a nanostructure for an ideal
+    self-limited process
 
     The kinetic model is a first order irreversible Langmuir, where
     molecules react with an available surface sites with a reaction
@@ -31,101 +47,201 @@ def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05):
     independent recombination probability betarec.
 
     The simulation uses normalized time using the impingement rate of gas phase
-    molecule into a single site as normalization units: 1/4 vth n s_0, with n
-    the number of molecules per unit volume, related to the precursor
-    partial pressure p through: p = n kB T.
+    molecule into a single site as normalization units:
+    .. math::
+        \frac{1}{t_0}= \frac{1}{4} s_0 v_{th} \frac{p}{k_BT} s_0
+
+    Parameters
+    ----------
+    st : Structure
+        structure to be modeled
+    beta0 : float
+        bare sticking probability for the self-limited process
+    betarec : float, optional
+        recombination probability
+    endcov : float, optional
+        termination condition, given by the final minimum surface coverage
+    ep : float, optional
+        maximum coverage variation allowed by the implicit method used to
+        solve the evolution of surface coverage.
+    wt : float, optional
+        different in average surface coverage between write intervals
+    verbose : bool, optional
+        if `true`, outputs intermediate steps to stdout
+    return_betaeff : bool, optional
+        if `true`, returns also the effective sticking probability
+
+    Returns
+    -------
+    Tuple(numpy.array)
+        returns a tuple containing the normalized times, the surface coverage
+        at every point of the feature and time, and, if `return_betaeff` is true,
+        the effective sticking probability.
+
     """
+
     av = np.ones(st.N-1)
-    dtl = [0]
-    cl = [1-av]
+    dtl = []
+    cl = []
+    betaeffl = []
     t = 0
     endav = 1-endcov
+    totalarea = np.sum(st.areas[1:])
+
+    sav = np.sum(av*st.areas[1:])/totalarea
+
     while np.amax(av) > endav:
-        betaald = beta0*av
-        betatot = betaald + betarec
-        pald = betaald/betatot
-        prec = betarec/betatot
+        betatot = beta0*av + betarec
         sprobs = np.ones(st.N)
         sprobs[1:] = betatot
         flux = ballistic_markov(sprobs, st, [0])
-        aldflux = pald*flux[1:]
-        recflux = prec*flux[1:]
-        persite = st.areas[0]*aldflux/st.areas[1:]
+        sticking = 1-flux[0]
+        persite = st.areas[0]*beta0*flux[1:]/st.areas[1:]
         maxp = np.amax(persite)
         dt = ep/maxp
-        t += dt
-        print(t, 1-np.mean(av), np.amax(av))
         av = av/(1+persite*dt)
-        dtl.append(t)
-        cl.append(1-av)
-    return dtl, cl, aldflux, recflux
+        t += dt
+        nsav = np.sum(av*st.areas[1:])/totalarea
+        if sav-nsav > wt:
+            dtl.append(t)
+            cl.append(1-av)
+            betaeff = 1-flux[0]
+            if verbose:
+                print(t, nsav, betaeff)
+            if return_betaeff:
+                betaeffl.append(betaeff)
+            sav = nsav
+    dtl.append(t)
+    cl.append(1-av)
+    if return_betaeff:
+        betaeff = 1-flux[0]
+        betaeffl.append(betaeff)
+        return np.array(dtl), np.array(cl), np.array(betaeff)
+    else:
+        return np.array(dtl), np.array(cl)
 
 
-def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05):
+def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05,
+    wt=0.01, verbose=True, return_betaeff=False):
     """
-    Solve the time-dependent ALD growth inside a nanostructure st with two surface
-    components.
+    Solve the reactive transport inside a nanostructure for a
+    soft-saturating self-limited process with two reaction pathways.
 
-    It consider two parallel reaction channels, with the second one comprising a
-    fraction f of the total number of sites.
-
-    In both cases, the kinetic model is a first order irreversible Langmuir kinetics,
-    where molecules react with an available surface sites with reaction probabilities
-    beta1 and beta2 for each zone. We can optionally define a coverage
-    independent recombination probability betarec.
+    The kinetic model is a first order irreversible Langmuir with two
+    types of surface sites, with the second pathway comprising
+    a fraction `f2` of the surface sites. Each pathway is
+    characterized by its own reaction probability `beta1` and
+    `beta2`, and the evolution of its respective surface coverages
+    is given by a first order irreversible Langmuir kinetics.
+    We can optionally define a coverage
+    independent recombination probability `betarec`.
 
     The simulation uses normalized time using the impingement rate of gas phase
-    molecule into a single site as normalization units: 1/4 vth n s_0, with n
-    the number of molecules per unit volume, related to the precursor
-    partial pressure p through: p = n kB T.
+    molecule into a single site as normalization units:
+    .. math::
+        \frac{1}{t_0}= \frac{1}{4} s_0 v_{th} \frac{p}{k_BT} s_0
 
-    The use of a second reaction pathway provides a simple way of modeling systems
-    that are soft-saturating.
+    Parameters
+    ----------
+    st : Structure
+        structure to be modeled
+    beta1 : float
+        reaction probability for the first self-limited process
+    beta2 : float
+        reaction probability for the second self-limited process
+    f2 : float
+        fraction of sites for the second pathway. It should be a number
+        between 0 and 1.
+    betarec : float, optional
+        recombination probability
+    endcov : float, optional
+        termination condition, given by the final minimum surface coverage
+    ep : float, optional
+        maximum coverage variation allowed by the implicit method used to
+        solve the evolution of surface coverage.
+    wt : float, optional
+        different in average surface coverage between write intervals
+    verbose : bool, optional
+        if `true`, outputs intermediate steps to stdout
+    return_betaeff : bool, optional
+        if `true`, returns also the effective sticking probability
+
+    Returns
+    -------
+    Tuple(numpy.array)
+        returns a tuple containing the normalized times, the surface coverage
+        at every point of the feature and time for each of the process and,
+        if `return_betaeff` is true, the effective sticking probability.
+
     """
 
     av1 = np.ones(st.N-1)
     av2 = np.ones(st.N-1)
-    dtl = [0]
-    cl1 = [1-av1]
-    cl2 = [1-av2]
-    beffl = []
+    dtl = []
+    cl1 = []
+    cl2 = []
+    betaeffl = []
     t = 0
     endav = 1-endcov
-    while np.amax(av1) > endav or np.amax(av2) > endav:
+    totalarea = np.sum(st.areas[1:])
+    sav1 = np.sum(av1*st.areas[1:])/totalarea
+    sav2 = np.sum(av2*st.areas[1:])/totalarea
+    sav = (1-f)*sav1 + f*sav2
+
+    while np.amax(av1+av2) > endav:
         betaald1 = beta1*av1*(1-f2)
         betaald2 = beta2*av2*f2
         betatot = betaald1 + betaald2 + betarec
-        pald1 = betaald1/betatot
-        pald2 = betaald2/betatot
-        prec = betarec/betatot
         sprobs = np.ones(st.N)
         sprobs[1:] = betatot
         flux = ballistic_markov(sprobs, st, [0])
-        beffl.append(1-flux[0])
-        aldflux1 = pald1*flux[1:]
-        aldflux2 = pald2*flux[1:]
-        recflux = prec*flux[1:]
-        persite1 = (1-f2)*st.areas[0]*aldflux1/st.areas[1:]
-        persite2 = f2*st.areas[0]*aldflux2/st.areas[1:]
+        persite1 = (1-f)*st.areas[0]*beta1*flux[1:]/st.areas[1:]
+        persite2 = (1-f)*st.areas[0]*beta2*flux[1:]/st.areas[1:]
         maxp1 = np.amax(persite1)
         maxp2 = np.amax(persite2)
         dt = ep/max(maxp1, maxp2)
-        t += dt
-        print(t, 1-np.mean(av1), np.amax(av1), 1-np.mean(av2), np.amax(av2), beffl[-1])
         av1 = av1/(1+persite1*dt)
         av2 = av2/(1+persite2*dt)
-        dtl.append(t)
-        cl1.append(1-av1)
-        cl2.append(1-av2)
-    return dtl, cl1, cl2, beffl
+        t += dt
+        nsav1 = np.sum(av1*st.areas[1:])/totalarea
+        nsav2 = np.sum(av2*st.areas[1:])/totalarea
+        nsav = (1-f)*nsav1 + f*nsav2
+        if sav-nsav > wt:
+            dtl.append(t)
+            cl1.append(1-av1)
+            cl2.append(1-av2)
+            betaeff = 1-flux[0]
+            if verbose:
+                print(t, nsav, betaeff)
+            if return_betaeff:
+                betaeffl.append(betaeff)
+            sav = nsav
+
+    dtl.append(t)
+    cl1.append(1-av1)
+    cl2.append(1-av2)
+    if return_betaeff:
+        betaeff = 1-flux[0]
+        betaeffl.append(betaeff)
+        return np.array(dtl), np.array(cl1), np.array(cl2), np.array(betaeffl)
+    else:
+        return np.array(dtl), np.array(cl1), np.array(cl2)
 
 
-def ballistic_markov(sprobs, st, entrypoints):
+def ballistic_markov(sprobs, st, entrypoints, transients=True):
     """
-    Solve the ballistic transport using a Markov chain method. It takes
-    a structure and a reaction probability array. The initial condition
-    is calculated assuming that particles enter the feature through a subset
-    of regions defined by entrypoints.
+    Solve the ballistic transport inside a structure.
+
+    The function solves the process as a Markov chain, where surfaces
+    and entry points contains absorbing states (in the Markov chain
+    sense) that terminates the stochastic process if a particle reacts
+    or reaches one of the entry points (i.e. leaves the feature).
+
+    The initial condition
+    is calculated from the view factors of the entry points, with the
+    probability of entering through a particular entry point being
+    proportional to its surface area. This is equivalent to considering
+    that the pressure is the same at all entry points of the structure.
 
     The probability of a particle reaching the interior of the feature
     is calculated from the view factor of each item in entrypoints.
@@ -133,18 +249,41 @@ def ballistic_markov(sprobs, st, entrypoints):
     This is equivalent to considering that the pressure is the same at all
     entry points of the structure.
 
-    In order to properly model a reactive transport process, sprobs must
-    be set to one for all entry elements. However, this function does not
-    check for that and instead it is responsibility of the caller to check
-    that sprobs is properly defined.
+    In order to properly model the reactive transport process, the sticking
+    probabilities of each of the entry points should be set to 1, to
+    indicate no reentry condition.
 
-    The outcome of the process
-    is the probability that a molecule reacts in each region of
-    the Structure or, in the case of an entry point, that it leaves the feature.
-
+    The outcome of the Markov chain process is an array of probabilities,
+    indicating the probability that a particle reacts with that section
+    of the structure or, in the case of the entry points, leaves the
+    structure through that specific section.
     Consequently, one minus the sum of all the outcome probabilities for all
     the entrypoints defines the effective sticking probability, the probability
     that an incoming particle reacts somewhere inside the Structure.
+
+
+    Parameters
+    ----------
+    sprobs : numpy.array
+        Sticking probabilities at each point of the feature. Entry points should
+        have sticking probabilities equal to one.
+    st : Structure
+        A structure variable, with well-defined areas and view factors for each
+        of its elements.
+    entrypoints : [int]
+        A list of indices indicating the entry points of the structure
+    transient : bool, optional
+        If true, returns the total flux reaching it section normalized to
+        the total area of the entry points. Otherwise, returns the outcome
+        probabilities.
+
+    Returns
+    -------
+    numpy.array
+        if `transient` is true returns the total flux reaching each section
+        normalized to the total area of the entry points. Otherwise, returns
+        the outcome probabilities.
+        
     """
 
     Q = np.zeros((st.N,st.N))
@@ -153,7 +292,10 @@ def ballistic_markov(sprobs, st, entrypoints):
     ImQ = np.identity(st.N) - Q
     p0 = st.qij @ st.get_p0(entrypoints)
     ptrans = np.linalg.solve(ImQ, p0)
-    outcome = sprobs * ptrans
+    if transients:
+        outcome = ptrans
+    else:
+        outcome = sprobs * ptrans
     return outcome
 
 if __name__ == "__main__":
