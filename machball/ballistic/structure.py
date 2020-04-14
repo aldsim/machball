@@ -1,12 +1,24 @@
-#Copyright 2019 Argonne UChicago LLC
+#Copyright 2013 Argonne UChicago LLC
 #This file is part of MachBall
 
 import numpy as np
 
 class Structure:
-    """A Structure is just an array of areas and view factors. It
+    """Implement a geometrical feature as an array of areas and view factors.
+
+    A Structure is just an array of areas and view factors. It
     optionally allows to define regions as either individual indices or as
     slices.
+
+    Parameters
+    ----------
+    areas : numpy.array
+        1D array with the areas of each element in the structure
+    qij : numpy.array
+        2D array with the view factors for all the elements
+    regions : dict
+        a dictionary partitioning the structure into a series of regions
+
     """
 
     def __init__(self, areas, qij, regions=None):
@@ -16,7 +28,7 @@ class Structure:
         if regions == None:
             self.regions = {}
         else:
-            self.regions = copy(regions)
+            self.regions = regions.copy()
 
     def region(self, name):
         return self.regions[name]
@@ -51,10 +63,20 @@ def read_structure(filename, areafile=None):
 class Via(Structure):
     """Implement a circular via
 
-    The aspect ratio AR is defined as the depth to diameter ratio, and Nz is
-    the number of wall sections. Consequently, a Via is composed of Nz + 2
-    elements, with the first and last element corresponding to the opening and
-    the base, respectively.
+    A Via is composed of `Nz` + 2 elements, with the first and last elements
+    corresponding to the opening and the base, respectively.
+
+    The view factors are calculated assuming a cosine law distribution, which
+    corresponds to the behavior expected both from diffuse reemision and a
+    non-directional flux of incident species.
+
+    Parameters
+    ----------
+    AR : float
+        Aspect ratio, defined as the depth to diameter ratio
+    Nz : int
+        Number of vertical sections in the discretized wall
+
     """
 
     def __init__(self, AR, Nz):
@@ -68,10 +90,20 @@ class Via(Structure):
 class Trench(Structure):
     """Implement a rectangular trench
 
-    The aspect ratio AR is defined as the depth to widht ratio, and Nz is
-    the number of wall sections. Consequently, a Via is composed of Nz + 2
-    elements, with the first and last element corresponding to the opening and
-    the base, respectively.
+    A trench is composed of `Nz` + 2 elements, with the first and last
+    elements corresponding to the opening and the base, respectively.
+
+    The view factors are calculated assuming a cosine law distribution, which
+    corresponds to the behavior expected both from diffuse reemision and a
+    non-directional flux of incident species.
+
+    Parameters
+    ----------
+    AR : float
+        Aspect ratio, defined as the depth to width ratio
+    Nz : int
+        Number of vertical sections in the discretized wall
+
     """
 
     def __init__(self, AR, Nz):
@@ -84,10 +116,24 @@ class Trench(Structure):
 
 
 def create_via(AR, Nz):
-    """Calculate the areas and view factor of a circular via, where
-    the vertical wall is divided into Nz identical sections. Here
-    the aspect ratio AR is defined as the depth to diameter ratio.
+    """Return the areas and view factor of a circular via, where
+    the vertical wall is divided into identical sections.
+
+    Parameters
+    ----------
+    AR : float
+        Aspect ratio, defined as the depth to diameter ratio
+    Nz : int
+        Number of vertical sections in the discretized wall
+
+    Returns
+    -------
+
+    (numpy.array, numpy.array)
+        Tuple with the areas (1D array), and view factors (2D array)
+
     """
+
     N = int(Nz + 2)
     qij = np.zeros((N,N))
     S0 = 0.25*np.pi
@@ -119,10 +165,24 @@ def create_via(AR, Nz):
 
 
 def create_trench(AR, Nz):
-    """Calculate the areas and view factor of a rectangular trench,
-    where the vertical wall is divided into Nz identical sections. Here
-    the AR is defined as the width to depth ratio.
+    """Return the areas and view factor of a rectangular trench, where
+    the vertical wall is divided into identical sections.
+
+    Parameters
+    ----------
+    AR : float
+        Aspect ratio, defined as the width to diameter ratio
+    Nz : int
+        Number of vertical sections in the discretized wall
+
+    Returns
+    -------
+
+    (numpy.array, numpy.array)
+        Tuple with the areas (1D array), and view factors (2D array)
+
     """
+
     N = int(Nz + 2)
     qij = np.zeros((N,N))
     S0 = 1
