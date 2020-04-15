@@ -1,7 +1,9 @@
 #Copyright 2013 Argonne UChicago LLC
 #This file is part of Machball
 r"""
-We have implemented two models of self-limited processes.
+This module contains the implementations of different ALD processes.
+For now, it is limited to an ideal self-limited kinetics with an
+optional surface recombination pathway.
 
 """
 
