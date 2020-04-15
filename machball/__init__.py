@@ -1,5 +1,5 @@
 #Copyright 2013 Argonne UChicago LLC
-#This file is part of MachBall
+#This file is part of Machball
 """
 Machball is a package for solving reactive transport inside nanostructured
 and high surface area materials in presence of self-limited surface

@@ -1,5 +1,5 @@
 #Copyright 2013 Argonne UChicago LLC
-#This file is part of MachBall
+#This file is part of Machball
 """
 This module contains a few utility functions and constants that are used
 in Machball.

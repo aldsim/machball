@@ -1,5 +1,5 @@
 #Copyright 2013 Argonne UChicago LLC
-#This file is part of MachBall
+#This file is part of Machball
 r"""
 We have implemented two models of self-limited processes.
 
