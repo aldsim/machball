@@ -1,18 +1,26 @@
-#Copyright 2019 Argonne UChicago LLC
+#Copyright 2013 Argonne UChicago LLC
 #This file is part of MachBall
 """
-Utility functions
+This module contains a few utility functions and constants that are used
+in Machball.
+
 """
 import numpy as np
 
 
-# Boltzman constant
 kB = 1.38e-23
-# atomic mass unit in kg
+"""Boltzmann constant in SI units"""
+
 amu = 1.66e-27
+"""Atomic mass unit in kg"""
 
 def vth(T, M):
-    """Mean thermal velocity
+    r"""Mean thermal velocity
+
+    Calculate the mean thermal velocity, defined as:
+
+    .. math::
+        v_{th} = \sqrt{\frac{8k_BT}{M}}
 
     Parameters
     ----------
@@ -21,6 +29,11 @@ def vth(T, M):
         Temperature in K
     M : float
         Molecular mass in atomic mass units
+
+    Returns
+    -------
+    float
+        Mean thermal velocity
 
     """
     return np.sqrt(8*kB*T/(amu*M*np.pi))
