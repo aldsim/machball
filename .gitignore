@@ -1,3 +1,22 @@
 *.pyc
 .DS_Store
 __pycache__
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+.eggs/
+parts/
+sdist/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Sphinx documentation
+_build/
+!_templates/*
