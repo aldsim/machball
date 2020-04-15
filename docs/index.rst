@@ -6,6 +6,14 @@ Machball
 .. automodule:: machball
    :members:
 
+.. include:: basic/install.rst
+
+.. include:: basic/started.rst
+
+.. include:: basic/about.rst
+
+.. include:: basic/citing.rst
+
 .. toctree::
    :maxdepth: 2
    :caption: API

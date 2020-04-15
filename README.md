@@ -45,7 +45,7 @@ the team comprises:
 
 # Citing
 
-If you are referencing MachBall in a publication, please cite
+If you are referencing Machball in a publication, please cite
 the following paper:
 
 * Ballistic transport model:
