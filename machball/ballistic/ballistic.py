@@ -37,7 +37,7 @@ def solve_constant(st, beta0, entrypoints=[0]):
 
 def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
         verbose=True, return_betaeff=False):
-    """
+    r"""
     Solve the reactive transport inside a nanostructure for an ideal
     self-limited process
 
@@ -48,11 +48,13 @@ def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
 
     The simulation uses normalized time using the impingement rate of gas phase
     molecule into a single site as normalization units:
+
     .. math::
         \frac{1}{t_0}= \frac{1}{4} s_0 v_{th} \frac{p}{k_BT} s_0
 
     Parameters
     ----------
+
     st : Structure
         structure to be modeled
     beta0 : float
@@ -73,6 +75,7 @@ def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
 
     Returns
     -------
+
     Tuple(numpy.array)
         returns a tuple containing the normalized times, the surface coverage
         at every point of the feature and time, and, if `return_betaeff` is true,
@@ -123,7 +126,7 @@ def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
 
 def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05,
     wt=0.01, verbose=True, return_betaeff=False):
-    """
+    r"""
     Solve the reactive transport inside a nanostructure for a
     soft-saturating self-limited process with two reaction pathways.
 
@@ -138,11 +141,13 @@ def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05,
 
     The simulation uses normalized time using the impingement rate of gas phase
     molecule into a single site as normalization units:
+
     .. math::
         \frac{1}{t_0}= \frac{1}{4} s_0 v_{th} \frac{p}{k_BT} s_0
 
     Parameters
     ----------
+    
     st : Structure
         structure to be modeled
     beta1 : float
@@ -168,6 +173,7 @@ def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05,
 
     Returns
     -------
+
     Tuple(numpy.array)
         returns a tuple containing the normalized times, the surface coverage
         at every point of the feature and time for each of the process and,
@@ -283,7 +289,7 @@ def ballistic_markov(sprobs, st, entrypoints, transients=True):
         if `transient` is true returns the total flux reaching each section
         normalized to the total area of the entry points. Otherwise, returns
         the outcome probabilities.
-        
+
     """
 
     Q = np.zeros((st.N,st.N))
