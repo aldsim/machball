@@ -7,7 +7,8 @@ and atomic layer etching (ALE).
 
 # Documentation
 
-Machball's documentation can be found under docs and in readthedocs.
+Machball's documentation can be found under docs and in
+[readthedocs](https://machball.readthedocs.io/en/latest/)
 
 # Install instructions
 
