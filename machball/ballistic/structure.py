@@ -2,6 +2,7 @@
 #This file is part of Machball
 
 import numpy as np
+import machball.ballistic.viewfactors as vf
 
 class Structure:
     """Implement a geometrical feature as an array of areas and view factors.
@@ -142,7 +143,7 @@ def create_via(AR, Nz):
     areas[1:(N-1)] = np.pi*dz
 
     for i in range(Nz):
-        qij[0,i+1] = cylinderwall_to_disk(0.5, 0.5, i*dz, (i+1)*dz)
+        qij[0,i+1] = vf.cylinderwall_to_disk(0.5, 0.5, i*dz, (i+1)*dz)
         qij[i+1,0] = areas[i+1]/areas[0]*qij[0,i+1]
         qij[N-2-i,-1] = qij[i+1,0]
         qij[-1,N-2-i] = qij[0,i+1]
@@ -150,11 +151,11 @@ def create_via(AR, Nz):
     qij[0,-1] = qij[-1,0]
 
     for i in range(Nz):
-        qij[i+1,i+1] = cylinderwall_to_itself(0.5, dz)
+        qij[i+1,i+1] = vf.cylinderwall_to_itself(0.5, dz)
 
     qdj = np.zeros(Nz-1)
     for i in range(Nz-1):
-        qdj[i] = cylindersection_to_section(0.5, dz, i+1)
+        qdj[i] = vf.cylindersection_to_section(0.5, dz, i+1)
 
     for i in range(Nz-1):
         for j in range(i+1,Nz):
@@ -162,6 +163,7 @@ def create_via(AR, Nz):
             qij[j+1,i+1] = qij[i+1,j+1]
 
     return areas, qij
+
 
 
 def create_trench(AR, Nz):
@@ -191,7 +193,7 @@ def create_trench(AR, Nz):
     areas[1:(N-1)] = 2*dz
 
     for i in range(Nz):
-        qij[i+1,0] = strip_to_wall(dz, i+1)
+        qij[i+1,0] = vf.strip_to_wall(dz, i+1)
         qij[0,i+1] = qij[i+1,0]/(2*dz)
         qij[N-2-i,-1] = qij[i+1,0]
         qij[-1,N-2-i] = qij[0,i+1]
@@ -199,11 +201,11 @@ def create_trench(AR, Nz):
     qij[0,-1] = qij[-1,0]
 
     for i in range(Nz):
-        qij[i+1,i+1] = strip_to_strip(dz, 0)
+        qij[i+1,i+1] = vf.strip_to_strip(dz, 0)
 
     qdj = np.zeros(Nz-1)
     for i in range(Nz-1):
-        qdj[i] = strip_to_strip(dz, i+1)
+        qdj[i] = vf.strip_to_strip(dz, i+1)
 
     for i in range(Nz-1):
         for j in range(i+1,Nz):
@@ -212,56 +214,76 @@ def create_trench(AR, Nz):
 
     return areas, qij
 
+def create_taperedvia(AR, dr, Nseg):
+    """Return the areas and view factor of a rectangular trench, where
+    the vertical wall is divided into identical sections.
 
-#View factors:
+    Parameters
+    ----------
+    AR : float
+        Aspect ratio, defined as the width to diameter ratio
+    Nz : int
+        Number of vertical sections in the discretized wall
 
-def base_to_cylinderwall(R1, H1):
-    H = H1/(2*R1)
-    return 2*H*(np.sqrt(1+H*H)-H)
+    Returns
+    -------
 
-def base_to_base(R1, H1):
-    return 1-base_to_cylinderwall(R1,H1)
+    (numpy.array, numpy.array)
+        Tuple with the areas (1D array), and view factors (2D array)
 
-def cylinderwall_to_itself(R1, H1):
-    r = R1/H1
-    rh = (np.sqrt(4*r*r+1)-1)/r
-    return 1-0.5*rh
+    """
 
-def cylinderwall_to_disk(Rc, Rd, h1, h2):
-    R = Rc/Rd
-    H1 = h1/Rd
-    H2 = h2/Rd
-    r2 = R*R
-    X1 = 1+H1*H1 + r2
-    X2 = 1+H2*H2 + r2
-    return (X1-X2-np.sqrt(X1*X1-4*r2)+np.sqrt(X2*X2-4*r2))/(4*R*(H2-H1))
+    dh = AR/Nseg
+    tana = 0.5*dr/AR
 
-def cylindersection_to_section(R, dz, n):
-    snear = cylinderwall_to_disk(R, R, dz*(n-1), dz*n)
-    sfar =  cylinderwall_to_disk(R, R, dz*n, dz*(n+1))
-    return snear-sfar
+    hi = np.arange(Nseg+1)*dh
+    ri = 0.5*(1-tana*hi)
+    Ai  = ri*ri
+    Si = (ri[0:-1]+ri[1:])*dh
 
+    areas = np.zeros(Nseg+2)
+    areas[0] = Ai[0]
+    areas[-1] = Ai[-1]
+    areas[1:-1] = Si
+    areas = areas/areas[0]
+    Ai = Ai/Ai[0]
 
-def strip_to_wall(dz, n):
-    a = 1 + dz*dz*(n+1)**2
-    b = 1 + dz*dz*n**2
-    return dz - dz*dz*(1+2*n)/(np.sqrt(a)+np.sqrt(b))
+    Fij = np.ones((Nseg+1,Nseg+1))
+    for i in range(Nseg):
+        for j in range(i+1, Nseg+1):
+            Fij[j,i] = vf.disk_to_shrinkcone(ri[i], dh*(j-i), tana)
+            Fij[i,j] = Ai[i]*Fij[j,i]/Ai[j]
 
-def strip_to_strip(dz, n):
-    if n > 0:
-        return wall_to_strip(dz,n)-wall_to_strip(dz,n+1)
-    else:
-        return 1-2*wall_to_strip(dz, 1)
+    Qij = np.zeros((Nseg+2, Nseg+2))
 
-def wall_to_strip(dz, n):
-    return 2*dz*strip_to_wall(dz, n)
+    for i in range(1,Nseg):
+        for j in range(i+1,Nseg+1):
+            q0 = Ai[i+1]*(Fij[j-1,i]-Fij[j,i])-Ai[i]*(Fij[j-1,i-1]-Fij[j,i-1])
+            Qij[j,i] = q0/areas[i]
+            Qij[i,j] = q0/areas[j]
+
+    Qij[1,0] = 1-Fij[1,0]
+    for i in range(2,Nseg+1):
+        Qij[i,0] = Fij[i-1,0]-Fij[i,0]
+    for i in range(1,Nseg):
+        Qij[i,-1] = Fij[i,-1]-Fij[i-1,-1]
+    Qij[-2,-1] = 1-Fij[-2,-1]
+    for  i in range(1,Nseg+1):
+        Qij[0,i] = areas[0]/areas[i]*Qij[i,0]
+        Qij[-1,i] = areas[-1]/areas[i]*Qij[i,-1]
+    Qij[-1,0] = 1-np.sum(Qij[:-1,0])
+    Qij[0,-1] = 1-np.sum(Qij[1:,-1])
+
+    for i in range(1,Nseg+1):
+        Qij[i,i] = 1-np.sum(Qij[:,i])
+
+    return areas, Qij
 
 
 if __name__ == "__main__":
     a, q = create_via(10,20)
-    for i in range(22):
-        print(sum(q[:,i]))
-
+    print(np.sum(q, axis=0), np.sum(q, axis=1),  np.sum(q))
     a, q = create_trench(10,20)
-    for i in range(22):
-        print(sum(q[i,:]))
+    print(np.sum(q, axis=0), np.sum(q, axis=1), np.sum(q))
+    a, q = create_taperedvia(20,0.5,40)
+    print(np.sum(q, axis=0), np.sum(q, axis=1), np.sum(q))
