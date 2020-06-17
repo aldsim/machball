@@ -1,6 +1,7 @@
 *.pyc
 .DS_Store
 __pycache__
+*.vtu
 
 # Distribution / packaging
 .Python
