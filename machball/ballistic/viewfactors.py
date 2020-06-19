@@ -33,6 +33,10 @@ def cylindersection_to_section(R, dz, n):
     sfar =  cylinderwall_to_disk(R, R, dz*n, dz*(n+1))
     return snear-sfar
 
+def strip_to_strip2(d, h):
+    h = h/d
+    return 1.0/(h+np.sqrt(1+h*h))
+
 def strip_to_wall(dz, n):
     a = 1 + dz*dz*(n+1)**2
     b = 1 + dz*dz*n**2
@@ -47,7 +51,12 @@ def strip_to_strip(dz, n):
 def wall_to_strip(dz, n):
     return 2*dz*strip_to_wall(dz, n)
 
-def disk_to_disk(r1, r2, h):
+def disk_to_disk(r, h):
+    r = r/h
+    r2 = 4*r*r
+    return r2/(1+np.sqrt(r2+1))**2
+
+def disk1_to_disk2(r1, r2, h):
     r22 = r2*r2
     r11 = r2*r1
     d = 4*r22/r11
