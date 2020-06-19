@@ -166,7 +166,7 @@ def create_via(AR, Nz):
 
 
 
-def create_trench(AR, Nz):
+def create_trench(AR, Nseg):
     """Return the areas and view factor of a rectangular trench, where
     the vertical wall is divided into identical sections.
 
@@ -174,7 +174,7 @@ def create_trench(AR, Nz):
     ----------
     AR : float
         Aspect ratio, defined as the width to diameter ratio
-    Nz : int
+    Nseg : int
         Number of vertical sections in the discretized wall
 
     Returns
@@ -185,34 +185,51 @@ def create_trench(AR, Nz):
 
     """
 
-    N = int(Nz + 2)
-    qij = np.zeros((N,N))
-    S0 = 1
-    areas = np.ones(N)
-    dz = AR/Nz
-    areas[1:(N-1)] = 2*dz
+    d0 = 1.0
+    dh = AR/Nseg
 
-    for i in range(Nz):
-        qij[i+1,0] = vf.strip_to_wall(dz, i+1)
-        qij[0,i+1] = qij[i+1,0]/(2*dz)
-        qij[N-2-i,-1] = qij[i+1,0]
-        qij[-1,N-2-i] = qij[0,i+1]
-    qij[-1,0] = 1-sum(qij[:,0])
-    qij[0,-1] = qij[-1,0]
+    Ai  = d0*np.ones(Nseg+1)
+    Si = 2*dh*np.ones(Nseg)
 
-    for i in range(Nz):
-        qij[i+1,i+1] = vf.strip_to_strip(dz, 0)
 
-    qdj = np.zeros(Nz-1)
-    for i in range(Nz-1):
-        qdj[i] = vf.strip_to_strip(dz, i+1)
+    areas = np.zeros(Nseg+2)
+    areas[0] = Ai[0]
+    areas[-1] = Ai[-1]
+    areas[1:-1] = Si
+    areas = areas/areas[0]
+    print(areas)
+    Ai = Ai/Ai[0]
 
-    for i in range(Nz-1):
-        for j in range(i+1,Nz):
-            qij[i+1,j+1] = qdj[j-i-1]
-            qij[j+1,i+1] = qij[i+1,j+1]
+    Fij = np.ones((Nseg+1,Nseg+1))
+    for i in range(Nseg):
+        for j in range(i+1, Nseg+1):
+            Fij[j,i] = vf.strip_to_strip2(d0, dh*(j-i))
+            Fij[i,j] = Fij[j,i]
 
-    return areas, qij
+    Qij = np.zeros((Nseg+2, Nseg+2))
+
+    for i in range(1,Nseg):
+        for j in range(i+1,Nseg+1):
+            q0 = Ai[i+1]*(Fij[j-1,i]-Fij[j,i])-Ai[i]*(Fij[j-1,i-1]-Fij[j,i-1])
+            Qij[j,i] = q0/areas[i]
+            Qij[i,j] = q0/areas[j]
+
+    Qij[1,0] = 1-Fij[1,0]
+    for i in range(2,Nseg+1):
+        Qij[i,0] = Fij[i-1,0]-Fij[i,0]
+    for i in range(1,Nseg):
+        Qij[i,-1] = Fij[i,-1]-Fij[i-1,-1]
+    Qij[-2,-1] = 1-Fij[-2,-1]
+    for  i in range(1,Nseg+1):
+        Qij[0,i] = areas[0]/areas[i]*Qij[i,0]
+        Qij[-1,i] = areas[-1]/areas[i]*Qij[i,-1]
+    Qij[-1,0] = 1-np.sum(Qij[:-1,0])
+    Qij[0,-1] = 1-np.sum(Qij[1:,-1])
+
+    for i in range(1,Nseg+1):
+        Qij[i,i] = 1-np.sum(Qij[:,i])
+
+    return areas, Qij
 
 def create_taperedvia(AR, dr, Nseg):
     """Return the areas and view factor of a rectangular trench, where
@@ -221,9 +238,11 @@ def create_taperedvia(AR, dr, Nseg):
     Parameters
     ----------
     AR : float
-        Aspect ratio, defined as the width to diameter ratio
-    Nz : int
-        Number of vertical sections in the discretized wall
+        Aspect ratio, defined as the width to top diameter ratio
+    dr : Float
+        Ratio between the bottom and the top diameter.
+    Nseg : int
+        Number of vertical segments in the discretized wall
 
     Returns
     -------
