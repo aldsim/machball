@@ -1,8 +1,10 @@
 #Copyright 2013 Argonne UChicago LLC
 #This file is part of Machball
 
+from . import viewfactors as vf
+
 import numpy as np
-import machball.ballistic.viewfactors as vf
+import pickle
 
 class Structure:
     """Implement a geometrical feature as an array of areas and view factors.
@@ -16,49 +18,137 @@ class Structure:
     areas : numpy.array
         1D array with the areas of each element in the structure
     qij : numpy.array
-        2D array with the view factors for all the elements
-    regions : dict
+        2D array with the view factors for all the elements. qij[i,j] represents
+        the view factor of section i from section j
+    entrypoints : list of ints, optional
+        a list containing the indices to entry points of the feature.
+        Defaults to 0.
+    regions : dict of list of ints, optional
         a dictionary partitioning the structure into a series of regions
+    coordinates : iterable object, optional
+        a list of coordinates that can be used for exporting data
 
     """
 
-    def __init__(self, areas, qij, regions=None):
+    def __init__(self, areas, qij, entrypoints=[0], regions=None, coordinates=None):
         self.N = len(areas)
         self.areas = areas
         self.qij = qij
-        if regions == None:
+        self._entrypoints = entrypoints.copy()
+        if regions is None:
             self.regions = {}
         else:
             self.regions = regions.copy()
 
+    @property
+    def entrypoints(self):
+        return self._entrypoints
+
+    @entrypoints.setter
+    def set_p0(self, p0):
+        self._entrypoints = entrypoints.copy()
+
     def region(self, name):
         return self.regions[name]
 
-    def get_p0(self, entrypoints):
+    def get_p0(self, entrypoints=[], flux=None):
+        """Calculate the impingement probability from a series
+        of entrypoints.
+        """
+
+        if entrypoints == []:
+            entrypoints = self.entrypoints
+        if flux is None:
+            flux = np.ones(len(entrypoints))
+
         p0 = np.zeros(self.N)
-        for i in entrypoints:
-            p0[i] = self.areas[i]
+        for f, i in zip(flux, entrypoints):
+            p0[i] = f*self.areas[i]
         p0 /= sum(p0)
-        return p0
+        return self.qij @ p0
 
-def read_structure(filename, areafile=None):
-    """Read a Structure from file
 
-    If areafile is not defined, it assumes that
-    the first column contains the normalized areas, with
-    the remaining columns the view factors.
+def save_structure(filename, st, mode="pickle", areafile=None):
+    """Save a structure to a file
 
-    Otherwise, it reads the first column of areafile and assumes
-    that the data contained in filename are just the view factors.
+    There are two options: saving the structure as a pickle,
+    which retains all metadata (entrypoints, coordinates, regions),
+    or just the view factors and areas as numpy arrays. In this
+    second case, if areafile is provided the view factors and areas are
+    saved in different files. Otherwise, the areas are saved as a first
+    column of a NxN+1 array.
+
+    Parameters
+    ----------
+    filename : str
+        file name
+    st : Structure
+        the structure to be saved
+    mode : {'pickle', 'numpy'}
+        If "pickle" saves it as pickle.
+    areafile : str, optional
+        Optional additional filename for storing the areas
+        when saving as numpy array.
+
     """
 
-    data = np.loadtxt(filename)
-    if areafile is None:
-        return Structure(data[:,0], data[:,1:])
+    if mode=="pickle":
+        with open(filename, "wb") as f:
+            pickle.dump(st, f)
+    elif mode=="numpy":
+        if areafile is None:
+            savedata = np.zeros((st.N, st.N+1))
+            savedata[:,1:] = st.qij
+            savedata[:,0] = st.areas
+            np.savetxt(filename, savedata)
+        else:
+            np.savetxt(filename, st.qij)
+            np.savetxt(areafile, st.areas)
     else:
-        areas = np.loadtxt(areafile)[:,0]
-        return Structure(areas, data)
+        raise ValueError("mode %s not recognized" % mode)
 
+
+def read_structure(filename, mode="pickle", areafile=None):
+    """Read a Structure from file
+
+    There are two options: reading the structure as a pickle or
+    as numpy arrays. In this
+    second case, if an optional areafile is provided the areas are
+    retrieved from that file. Otherwise, the areas are saved as a first
+    column of a NxN+1 array in filename.
+
+    Parameters
+    ----------
+
+    filename : str
+        file name
+    mode : {'pickle', 'numpy'}
+        If "pickle" saves it as pickle.
+    areafile : str, optional
+        Optional additional filename for storing the areas
+        when saving as numpy array.
+
+    Returns
+    -------
+
+    st : Structure
+        structure read from file
+
+    """
+
+    if mode == "pickle":
+        with open(filename, "rb") as f:
+            st = pickle.load(f)
+        return st
+    elif mode == "numpy":
+        data = np.loadtxt(filename)
+        if areafile is None:
+            return Structure(data[:,0], data[:,1:])
+        else:
+            areas = np.loadtxt(areafile)
+            return Structure(areas, data)
+    else:
+        raise ValueError("mode %s not recognized" % mode)
 
 
 class Via(Structure):
@@ -85,7 +175,7 @@ class Via(Structure):
         N = Nz + 2
         regions = {"top":0, "bottom":(N-1), "wall":slice(1,N-1)}
         areas, qij = create_via(AR, Nz)
-        Structure.__init__(self, areas, qij, regions)
+        Structure.__init__(self, areas, qij, regions=regions)
 
 
 class Trench(Structure):
@@ -112,7 +202,7 @@ class Trench(Structure):
         N = Nz + 2
         regions = {"top":0, "bottom":(N-1), "wall":slice(1,N-1)}
         areas, qij = create_trench(AR, Nz)
-        Structure.__init__(self, areas, qij, regions)
+        Structure.__init__(self, areas, qij, regions=regions)
 
 
 
@@ -186,7 +276,7 @@ def create_trench(AR, Nseg):
     """
 
     d0 = 1.0
-    dh = AR/Nseg
+    dh = d0*AR/Nseg
 
     Ai  = d0*np.ones(Nseg+1)
     Si = 2*dh*np.ones(Nseg)
@@ -217,13 +307,14 @@ def create_trench(AR, Nseg):
     Qij[1,0] = 1-Fij[1,0]
     for i in range(2,Nseg+1):
         Qij[i,0] = Fij[i-1,0]-Fij[i,0]
-    for i in range(1,Nseg):
+    Qij[-1,0] = 1-np.sum(Qij[:-1,0])
+
+    for i in range(1,Nseg+1):
         Qij[i,-1] = Fij[i,-1]-Fij[i-1,-1]
     Qij[-2,-1] = 1-Fij[-2,-1]
     for  i in range(1,Nseg+1):
         Qij[0,i] = areas[0]/areas[i]*Qij[i,0]
         Qij[-1,i] = areas[-1]/areas[i]*Qij[i,-1]
-    Qij[-1,0] = 1-np.sum(Qij[:-1,0])
     Qij[0,-1] = 1-np.sum(Qij[1:,-1])
 
     for i in range(1,Nseg+1):
