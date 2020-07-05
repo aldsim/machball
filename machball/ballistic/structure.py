@@ -34,7 +34,7 @@ class Structure:
         self.N = len(areas)
         self.areas = areas
         self.qij = qij
-        self._entrypoints = entrypoints.copy()
+        self.entrypoints = entrypoints
         if regions is None:
             self.regions = {}
         else:
@@ -45,7 +45,7 @@ class Structure:
         return self._entrypoints
 
     @entrypoints.setter
-    def set_p0(self, p0):
+    def set_entrypoints(self, entrypoints):
         self._entrypoints = entrypoints.copy()
 
     def region(self, name):
