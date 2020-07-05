@@ -18,6 +18,7 @@ Machball
    :maxdepth: 2
    :caption: API
 
+   tutorial.rst
    apidocs/aldmodels.rst
    apidocs/ballistic.rst
    apidocs/structure.rst

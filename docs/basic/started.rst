@@ -1,7 +1,7 @@
 Getting started
 ===============
 
-One it has been installed, Machball is trivial to use. Here is
+Once it has been installed, Machball is trivial to use. Here is
 a simple snippet to model the transport inside a circular via::
 
     from machball import ALDIdeal
