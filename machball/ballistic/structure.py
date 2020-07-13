@@ -47,6 +47,11 @@ class Structure:
     @entrypoints.setter
     def set_entrypoints(self, entrypoints):
         self._entrypoints = entrypoints.copy()
+        self._growthsections = [i for i in self.N if i not in self.entrypoints]
+
+    @property
+    def growthsections(self):
+        return self._growthsections
 
     def region(self, name):
         return self.regions[name]
