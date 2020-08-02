@@ -151,7 +151,7 @@ class ALDIdeal:
 
         """
 
-        t = np.arange(0.1,4,0.1)*self.t0/self.beta0
+        t = np.arange(0.1,6,0.1)*self.t0/self.beta0
         c = self.coverage_flat(t)
         return t, c
 

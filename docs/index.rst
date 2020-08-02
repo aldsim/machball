@@ -19,6 +19,7 @@ Machball
    :caption: API
 
    tutorial.rst
+   machball_tutorial.rst
    apidocs/aldmodels.rst
    apidocs/ballistic.rst
    apidocs/structure.rst

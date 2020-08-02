@@ -108,3 +108,62 @@ def vth(T, M):
 
     """
     return np.sqrt(8*kB*T/(amu*M*np.pi))
+
+
+def save_saturation(filename, times, cov, csv=False):
+    """Save a saturation curve in a text file
+
+    The saturation curve is saved as a two column text file.
+
+    Parameters
+    ----------
+
+    filename : str
+        Name of the file
+    times : numpy.array
+        Time column
+    cov : numpy.array
+        Coverage as a function  of time
+    csv : bool, optional (default False)
+        Save as comma separated (default is space separated)
+    """
+
+    ntimes = times.shape[0]
+    data = np.zeros((ntimes,2))
+    data[:,0] = times
+    data[:,1] = cov
+    if csv:
+        np.savetxt(filename, data)
+    else:
+        np.savetxt(filename, data, delimiter=",")
+
+
+
+def save_saturationprofile(filename, times, covs, csv=False):
+    """Save a time series of coverage profiles as a text file
+
+    The saturation curve is saved as a N+1 column text file, where N is
+    the number of discrete zones in the feature
+
+    Parameters
+    ----------
+
+    filename : str
+        Name of the file
+    times : numpy.array
+        Time column
+    cov : numpy.array
+        2D array with coverage profiles as a function of time
+    csv : bool, optional (default False)
+        Save as comma separated (default is space separated)
+    """
+
+    ntimes, nzones = covs.shape
+
+    data = np.zeros((ntimes,nzones+1))
+    data[:,0] = times
+    data[:,1:] = covs
+    if csv:
+        np.savetxt(filename, data)
+    else:
+        np.savetxt(filename, data, delimiter=",")
