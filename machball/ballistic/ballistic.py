@@ -8,7 +8,7 @@ Markov chain approach
 
 import numpy as np
 
-def solve_constant(st, beta0, entrypoints=[0]):
+def solve_constant(st, beta0):
     """
     Solve the steady state reactive transport for a constant reaction probability.
 
@@ -18,21 +18,22 @@ def solve_constant(st, beta0, entrypoints=[0]):
             nanostructure in which the ballistic transport takes place
         beta0 : float
             sticking probability.
-        entrypoint : [Int], optional
-            entry points in the structure
 
     Returns
     -------
-        np.array
-            1D array representing the outcome probabilities (transients=False)
-            or the wall flux normalized to the entry area (transients=True)
+        (nd.array, float)
+            Tuple of 1D array representing the outcome probabilities and the
+            effective sticking probability
 
     """
 
     sprobs = beta0*np.ones(st.N)
-    for i in entrypoints:
+    for i in st.entrypoints:
         sprobs[i] = 1.0
-    return ballistic_markov(sprobs, st, entrypoints, transients=False)
+    probs = ballistic_markov(sprobs, st, st.entrypoints, transients=False)
+    p = 1-sum([probs[i] for i in st.entrypoints])
+    growth = np.array([probs[i] for i in range(st.N) if i not in st.entrypoints])
+    return growth, p
 
 
 def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
@@ -102,6 +103,7 @@ def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
         persite = st.areas[0]*beta0*flux[1:]/st.areas[1:]
         maxp = np.amax(persite)
         dt = ep/maxp
+
         av = av/(1+persite*dt)
         t += dt
         nsav = np.sum(av*st.areas[1:])/totalarea
@@ -119,13 +121,122 @@ def solve_ideal(st, beta0, betarec=0, endcov=0.95, ep=0.05, wt=0.01,
     if return_betaeff:
         betaeff = 1-flux[0]
         betaeffl.append(betaeff)
-        return np.array(dtl), np.array(cl), np.array(betaeff)
+        return np.array(dtl), np.array(cl), np.array(betaeffl)
     else:
         return np.array(dtl), np.array(cl)
 
 
-def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05,
-    wt=0.01, verbose=True, return_betaeff=False):
+def solve_ideal2(st, beta0, betarec=0, endmode="average", startav=None, endcov=0.95, ep=0.05, wt=0.01,
+        verbose=True, return_betaeff=False):
+    r"""
+    Solve the reactive transport inside a nanostructure for an ideal
+    self-limited process
+
+    The kinetic model is a first order irreversible Langmuir, where
+    molecules react with an available surface sites with a reaction
+    probability beta0. We can optionally define a coverage
+    independent recombination probability betarec.
+
+    The simulation uses normalized time using the impingement rate of gas phase
+    molecule into a single site as normalization units:
+
+    .. math::
+        \frac{1}{t_0}= \frac{1}{4} s_0 v_{th} \frac{p}{k_BT} s_0
+
+    Parameters
+    ----------
+
+    st : Structure
+        structure to be modeled
+    beta0 : float
+        bare sticking probability for the self-limited process
+    betarec : float, optional
+        recombination probability
+    endcov : float, optional
+        termination condition, given by the final minimum surface coverage
+    ep : float, optional
+        maximum coverage variation allowed by the implicit method used to
+        solve the evolution of surface coverage.
+    wt : float, optional
+        different in average surface coverage between write intervals
+    verbose : bool, optional
+        if `true`, outputs intermediate steps to stdout
+    return_betaeff : bool, optional
+        if `true`, returns also the effective sticking probability
+
+    Returns
+    -------
+
+    Tuple(numpy.array)
+        returns a tuple containing the normalized times, the surface coverage
+        at every point of the feature and time, and, if `return_betaeff` is true,
+        the effective sticking probability.
+
+    """
+
+    surface_ids = [i for i in range(st.N) if i not in st.entrypoints]
+    nsurf = len(surface_ids)
+
+    if startav is None:
+        av = np.ones(nsurf)
+    else:
+        av = startav
+        assert(len(av)==nsurf)
+
+    dtl = []
+    cl = []
+    betaeffl = []
+    t = 0
+    endav = 1-endcov
+    s_areas = np.array([st.areas[i] for i in surface_ids])
+    totalarea = np.sum(s_areas)
+    entryarea = sum(st.areas[i] for i in st.entrypoints)
+
+    sav = np.sum(av*s_areas)/totalarea
+    nsav = np.sum(av*s_areas)/totalarea
+
+    if endmode == "average":
+        cond = lambda av, sav, t:  sav > endav
+    elif endmode == "time":
+        cond  = lambda av, sav, t : t < endcov
+    else:
+        cond = lambda av, sav, t: np.amax(av) > endav
+
+    while cond(av, sav, t):
+        betatot = beta0*av + betarec
+        sprobs = np.ones(st.N)
+        for i, k in enumerate(surface_ids):
+            sprobs[k] = betatot[i]
+        flux = ballistic_markov(sprobs, st, st.entrypoints)
+        fluxout = sum(flux[i] for i in st.entrypoints)
+        probs = np.array([flux[i] for i in surface_ids])
+        betaeff = 1-fluxout
+        persite = entryarea*beta0*probs/s_areas
+        maxp = np.amax(persite)
+        dt = ep/maxp
+
+        av = av/(1+persite*dt)
+        t += dt
+        nsav = np.sum(av*s_areas)/totalarea
+        if sav-nsav > wt:
+            dtl.append(t)
+            cl.append(1-av)
+            if verbose:
+                print(t, nsav, betaeff)
+            if return_betaeff:
+                betaeffl.append(betaeff)
+            sav = nsav
+    dtl.append(t)
+    cl.append(1-av)
+    if return_betaeff:
+        betaeffl.append(betaeff)
+        return np.array(dtl), np.array(cl), np.array(betaeffl)
+    else:
+        return np.array(dtl), np.array(cl)
+
+
+def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endmode="average",
+    endcov=0.95, ep=0.05, wt=0.01, verbose=True, return_betaeff=False):
     r"""
     Solve the reactive transport inside a nanostructure for a
     soft-saturating self-limited process with two reaction pathways.
@@ -147,7 +258,7 @@ def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endcov=0.95, ep=0.05,
 
     Parameters
     ----------
-    
+
     st : Structure
         structure to be modeled
     beta1 : float
@@ -296,7 +407,7 @@ def ballistic_markov(sprobs, st, entrypoints, transients=True):
     for i in range(st.N):
         Q[:,i] = (1-sprobs[i])*st.qij[:,i]
     ImQ = np.identity(st.N) - Q
-    p0 = st.qij @ st.get_p0(entrypoints)
+    p0 = st.get_p0(entrypoints)
     ptrans = np.linalg.solve(ImQ, p0)
     if transients:
         outcome = ptrans
