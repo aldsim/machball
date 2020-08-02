@@ -9,7 +9,7 @@ matplotlib, and Machball installed.
 
 Let’s start by importing matplotlib and numpy:
 
-.. code:: ipython
+.. code:: python
 
     import matplotlib.pyplot as pt
     import numpy as np
@@ -17,7 +17,7 @@ Let’s start by importing matplotlib and numpy:
 These packages will allow us to work with arrays and matrices as well as
 to plot the results:
 
-.. code:: ipython
+.. code:: python
 
     x = np.arange(0,20,0.1)
     y = np.sin(x)
@@ -52,7 +52,7 @@ Defining process parameters
 
 We can start by defining some of these parameters:
 
-.. code:: ipython
+.. code:: python
 
     p = 10
     M = 150
@@ -63,13 +63,13 @@ The average area of a surface site is perhaps the less intuitive of the
 parameters. However, Machball provides two functions that can be used to
 calculate this value from the growth per cycle or the mass per cycle.
 
-.. code:: ipython
+.. code:: python
 
     from machball.utils import sitearea, sitearea_fromqcm
 
 If we look at the documentation of these two functions:
 
-.. code:: ipython
+.. code:: python
 
     help(sitearea)
 
@@ -102,7 +102,7 @@ If we look at the documentation of these two functions:
 
 
 
-.. code:: ipython
+.. code:: python
 
     help(sitearea_fromqcm)
 
@@ -137,7 +137,7 @@ They help establish a connection between experimental observables and
 the average area of a surface site. Let’s use 35 ng/cm2 as the mass gain
 per cycle and the molar mass of Al2O3:
 
-.. code:: ipython
+.. code:: python
 
     sitearea_fromqcm(102, 35, 2)
 
@@ -153,7 +153,7 @@ per cycle and the molar mass of Al2O3:
 Let’s plot the value of the site area for alumina for a range of mass
 gain per cycle:
 
-.. code:: ipython
+.. code:: python
 
     mgain = np.arange(10,45,0.1)
     areas = 1e18*sitearea_fromqcm(102, mgain, 2) # Convert to square Angstrom
@@ -176,7 +176,7 @@ gain per cycle:
 
 So let’s define a value of s0:
 
-.. code:: ipython
+.. code:: python
 
     s0 = 20e-20
 
@@ -185,7 +185,7 @@ Working widh ALDIdeal
 
 Let’s import ``ALDIdeal`` and define our ALD chemistry:
 
-.. code:: ipython
+.. code:: python
 
     from machball import ALDIdeal
 
@@ -194,7 +194,7 @@ Let’s import ``ALDIdeal`` and define our ALD chemistry:
 The first thing we can do is to use the ``dose`` method to calculate the
 effect of a dose:
 
-.. code:: ipython
+.. code:: python
 
     ald.dose(0.02) # dose time in seconds
 
@@ -211,7 +211,7 @@ The returned value is the fractional coverage after the dose. It is
 important to remember that, at this point, doses are not accumulative
 yet. If you repeat the same dose, you will obtain the same value:
 
-.. code:: ipython
+.. code:: python
 
     ald.dose(0.02)
 
@@ -230,14 +230,14 @@ to monitor the effect of multiple microdoses
 ``ALDIdeal`` also has a method for directly calculating the saturation
 curve:
 
-.. code:: ipython
+.. code:: python
 
     times, cov = ald.saturation()
 
 This method returns a list of times and saturation coverages. Let’s plot
 them:
 
-.. code:: ipython
+.. code:: python
 
     pt.plot(1e3*times,cov)
     pt.xlabel("Dose time, ms")
@@ -258,7 +258,7 @@ them:
 
 We can save the saturation profile to a file using ``save_saturation``
 
-.. code:: ipython
+.. code:: python
 
     from machball.utils import save_saturation
     save_saturation("mysaturation.dat", times, cov)
@@ -267,7 +267,7 @@ The default is to save it as a space-delimited file. If instead, you
 want to save it as a comma separated value, we need to specify the
 ``csv`` flag:
 
-.. code:: ipython
+.. code:: python
 
     save_saturation("mysaturation.csv", times, cov, csv=True)
 
@@ -285,7 +285,7 @@ arbitrary geometries as long as the view factors are provided.
 
 We first need to import and create our nanostructure:
 
-.. code:: ipython
+.. code:: python
 
     from machball.ballistic import Via
 
@@ -294,7 +294,7 @@ plus the bottom. In order to instantiate a specific via, we need to pass
 the aspect ratio, defined as the depth/diameter ratio, and the number of
 vertical segments:
 
-.. code:: ipython
+.. code:: python
 
     st = Via(100, 200)
 
@@ -302,7 +302,7 @@ We can now use the same interface as we used for exploring the evolution
 of surface coverage on a flat surface. First, we can look at the result
 of a specific dose:
 
-.. code:: ipython
+.. code:: python
 
     cov = ald.dose(0.5, st)
 
@@ -313,7 +313,7 @@ object that we created before.
 If we directly plot the output we see the coverage for all the different
 elements:
 
-.. code:: ipython
+.. code:: python
 
     pt.plot(cov)
 
@@ -334,53 +334,41 @@ It is important to note, though, that in the output of ``dose`` also
 contains the coverage in the bottom of the feature. In fact, if we look
 at the length of ``cov``:
 
-.. code:: ipython
+.. code:: python
 
     len(cov)
-
-
 
 
 .. parsed-literal::
 
     201
 
-
-
 It has 201 elements whereas in the definition of our via we specified
 200 vertical segments. The coverage at the bottom is stored in the last
 element of the array. Therefore, if we want to plot as a function of
 depth, we need to leave that element out:
 
-.. code:: ipython
+.. code:: python
 
     cov_wall = cov[:-1] # This creates a slice of the array which leaves the last element out
 
-.. code:: ipython
+.. code:: python
 
     len(cov_wall)
-
-
 
 
 .. parsed-literal::
 
     200
 
-
-
-.. code:: ipython
+.. code:: python
 
     pt.plot(cov_wall)
-
-
 
 
 .. parsed-literal::
 
     [<matplotlib.lines.Line2D at 0x117d29b90>]
-
-
 
 
 .. image:: machball_tutorial_files/machball_tutorial_48_1.png
@@ -390,17 +378,15 @@ Like in the flat case, we can also directly calculate the saturation
 profile. This will give us a sequence of coverage profiles as a function
 of time:
 
-.. code:: ipython
+.. code:: python
 
     times2, covs2 = ald.saturation(st, endcov=0.95, verbose=False)
 
 ``covs2`` is a 2D array. If we look at its shape:
 
-.. code:: ipython
+.. code:: python
 
     covs2.shape
-
-
 
 
 .. parsed-literal::
@@ -408,25 +394,16 @@ of time:
     (97, 201)
 
 
-
 We see that each row represents a coverage profile for a given time.
 
 Using slices we can plot specific times:
 
-.. code:: ipython
+.. code:: python
 
     pt.plot(covs2[10,:-1], label=("%6.4f s" % times2[10]))
     pt.plot(covs2[20,:-1], label=("%6.4f s" % times2[20]))
     pt.plot(covs2[50,:-1], label=("%6.4f s" % times2[50]))
     pt.legend()
-
-
-
-
-.. parsed-literal::
-
-    <matplotlib.legend.Legend at 0x117e750d0>
-
 
 
 
@@ -436,7 +413,7 @@ Using slices we can plot specific times:
 Note that, as before, we have used ``:-1`` to keep just the sidewall
 regions of our via. We can also view the 2D array as an image:
 
-.. code:: ipython
+.. code:: python
 
     pt.imshow(covs2[:,:-1])
 
@@ -457,7 +434,7 @@ However, it is important to note that the times are not linearly spaced,
 since Machball uses an adaptive timestep to evolve the fractional
 coverage with time:
 
-.. code:: ipython
+.. code:: python
 
     times2
 
@@ -491,7 +468,7 @@ coverage with time:
 
 We can also plot the average surface coverage as a function of time
 
-.. code:: ipython
+.. code:: python
 
     pt.plot(times2, np.mean(covs2,axis=1))
     pt.xlabel("Dose time (s)")
@@ -515,11 +492,11 @@ transport-limited process.
 
 Finally, we can export the coverage profiles and the times to a file:
 
-.. code:: ipython
+.. code:: python
 
     from machball.utils import save_saturationprofile
 
-.. code:: ipython
+.. code:: python
 
     save_saturationprofile("via100.dat", times2, covs2)
 
