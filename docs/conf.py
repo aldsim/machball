@@ -39,9 +39,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.githubpages',
-    'sphinx.ext.autosummary',
-    'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive',    
+    'sphinx.ext.autosummary',   
 ]
 
 
