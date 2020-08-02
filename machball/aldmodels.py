@@ -112,6 +112,12 @@ class ALDIdeal:
             return dose_ideal(st, t/self.t0, self.beta0,
                 self.betarec)
 
+    def saturation(self, st=None, endcov=0.95, verbose=True):
+        if st is None:
+            return self.saturation_flat()
+        else:
+            return self.saturation_ballistic(st, endcov, verbose)
+
     def coverage_flat(self, t):
         """Return the surface coverage on a flat surface
 
@@ -176,6 +182,3 @@ class ALDIdeal:
             verbose=verbose)
         times = self.t0*times
         return times, cov
-
-
-# TODO: ALDSoftSat
