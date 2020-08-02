@@ -3,8 +3,8 @@ Machball: a very simple tutorial
 ================================
 
 This is a simple tutorial on how to use and how to make the most of
-Machball. It assumes that you have a Python distribution with the
-jupyter environment, numpy (which is one of Machball’s dependencies),
+Machball. It assumes that you have a Python distribution
+with numpy (which is one of Machball’s dependencies),
 matplotlib, and Machball installed.
 
 Let’s start by importing matplotlib and numpy:
@@ -22,7 +22,6 @@ to plot the results:
    x = np.arange(0,20,0.1)
    y = np.sin(x)
    pt.plot(x,y)
-
 
 .. image:: machball_tutorial_files/machball_tutorial_4_1.png
 
@@ -79,8 +78,6 @@ Yields:
 
     2.4196991981781087e-19
 
-
-
 Let’s plot the value of the site area for alumina for a range of mass
 gain per cycle:
 
@@ -97,7 +94,7 @@ gain per cycle:
 .. image:: machball_tutorial_files/machball_tutorial_16_1.png
 
 
-So let’s define a value of s0:
+So let’s define a value of ``s0``:
 
 .. code-block:: python
 
