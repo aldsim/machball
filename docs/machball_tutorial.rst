@@ -24,13 +24,6 @@ to plot the results:
    pt.plot(x,y)
 
 
-
-
-.. parsed-literal::
-
-    [<matplotlib.lines.Line2D at 0x11769d250>]
-
-
 .. image:: machball_tutorial_files/machball_tutorial_4_1.png
 
 
@@ -67,71 +60,12 @@ calculate this value from the growth per cycle or the mass per cycle.
 
 If we look at the documentation of these two functions:
 
-.. code-block:: python
+.. autofunction:: machball.utils.sitearea
 
-   help(sitearea)
-
-
-.. parsed-literal::
-
-    Help on function sitearea in module machball.utils:
-
-    sitearea(M, density, gpc, nmol=1)
-        Average area of a surface site
-
-        Calculate the average area of a surface site
-
-        Parameters
-        ----------
-
-        M : float
-            Molecular mass in atomic mass units
-        density : float
-            Density of the film, in g/cm3
-        gpc : float
-            Growth per cycle, in Angstroms
-        nmol : int, optional (default 1)
-            Number of precursor molecules per unit formula of the solid
-
-        Returns
-        -------
-        float
-            Average area of a surface site in sq. meters
+.. autofunction:: machball.utils.sitearea_fromqcm
 
 
-
-.. code-block:: python
-
-   help(sitearea_fromqcm)
-
-
-.. parsed-literal::
-
-    Help on function sitearea_fromqcm in module machball.utils:
-
-    sitearea_fromqcm(M, mpc, nmol=1)
-        Average area of a surface site
-
-        Calculate the average area of a surface site from qcm data
-
-        Parameters
-        ----------
-
-        M : float
-            Molecular mass in atomic mass units
-        mpc : float
-            Mass per cycle in  ng/cm2
-        nmol : int, optional (default 1)
-            Number of precursor molecules per unit formula of the solid
-
-        Returns
-        -------
-        float
-            Average area of a surface site in sq. meters
-
-
-
-They help establish a connection between experimental observables and
+These functions help establish a connection between experimental observables and
 the average area of a surface site. Let’s use 35 ng/cm2 as the mass gain
 per cycle and the molar mass of Al2O3:
 
@@ -139,8 +73,7 @@ per cycle and the molar mass of Al2O3:
 
    sitearea_fromqcm(102, 35, 2)
 
-
-
+Yields:
 
 .. parsed-literal::
 
@@ -158,14 +91,6 @@ gain per cycle:
    pt.plot(mgain, areas)
    pt.xlabel(r"Mass gain, ng/cm$^2$")
    pt.ylabel(r"Surface site area, nm$^2$")
-
-
-
-
-.. parsed-literal::
-
-    Text(0, 0.5, 'Surface site area, nm$^2$')
-
 
 
 
@@ -196,13 +121,11 @@ effect of a dose:
 
    ald.dose(0.02) # dose time in seconds
 
-
-
+This yields:
 
 .. parsed-literal::
 
     0.9809029825287979
-
 
 
 The returned value is the fractional coverage after the dose. It is
@@ -214,13 +137,9 @@ yet. If you repeat the same dose, you will obtain the same value:
    ald.dose(0.02)
 
 
-
-
 .. parsed-literal::
 
     0.9809029825287979
-
-
 
 This is something that will be changed in the next version, to be able
 to monitor the effect of multiple microdoses
@@ -240,15 +159,6 @@ them:
    pt.plot(1e3*times,cov)
    pt.xlabel("Dose time, ms")
    pt.ylabel("Fractional surface coverage")
-
-
-
-
-.. parsed-literal::
-
-    Text(0, 0.5, 'Fractional surface coverage')
-
-
 
 
 .. image:: machball_tutorial_files/machball_tutorial_28_1.png
@@ -316,15 +226,6 @@ elements:
    pt.plot(cov)
 
 
-
-
-.. parsed-literal::
-
-    [<matplotlib.lines.Line2D at 0x117c53850>]
-
-
-
-
 .. image:: machball_tutorial_files/machball_tutorial_42_1.png
 
 
@@ -336,12 +237,13 @@ at the length of ``cov``:
 
    len(cov)
 
+Yields the following value:
 
 .. parsed-literal::
 
     201
 
-It has 201 elements whereas in the definition of our via we specified
+``cov`` has 201 elements whereas in the definition of our via we specified
 200 vertical segments. The coverage at the bottom is stored in the last
 element of the array. Therefore, if we want to plot as a function of
 depth, we need to leave that element out:
@@ -349,24 +251,7 @@ depth, we need to leave that element out:
 .. code-block:: python
 
    cov_wall = cov[:-1] # This creates a slice of the array which leaves the last element out
-
-.. code-block:: python
-
-   len(cov_wall)
-
-
-.. parsed-literal::
-
-    200
-
-.. code-block:: python
-
    pt.plot(cov_wall)
-
-
-.. parsed-literal::
-
-    [<matplotlib.lines.Line2D at 0x117d29b90>]
 
 
 .. image:: machball_tutorial_files/machball_tutorial_48_1.png
@@ -386,6 +271,7 @@ of time:
 
    covs2.shape
 
+The returned value is:
 
 .. parsed-literal::
 
@@ -404,7 +290,6 @@ Using slices we can plot specific times:
    pt.legend()
 
 
-
 .. image:: machball_tutorial_files/machball_tutorial_55_1.png
 
 
@@ -414,14 +299,6 @@ regions of our via. We can also view the 2D array as an image:
 .. code-block:: python
 
    pt.imshow(covs2[:,:-1])
-
-
-
-
-.. parsed-literal::
-
-    <matplotlib.image.AxesImage at 0x114cd5790>
-
 
 
 
@@ -436,8 +313,7 @@ coverage with time:
 
    times2
 
-
-
+Returns the following array of times:
 
 .. parsed-literal::
 
@@ -473,15 +349,6 @@ We can also plot the average surface coverage as a function of time
    pt.ylabel("Average surface coverage")
 
 
-
-
-.. parsed-literal::
-
-    Text(0, 0.5, 'Average surface coverage')
-
-
-
-
 .. image:: machball_tutorial_files/machball_tutorial_61_1.png
 
 
@@ -493,9 +360,6 @@ Finally, we can export the coverage profiles and the times to a file:
 .. code-block:: python
 
    from machball.utils import save_saturationprofile
-
-.. code-block:: python
-
    save_saturationprofile("via100.dat", times2, covs2)
 
 Next steps
