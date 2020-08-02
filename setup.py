@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="machball",
-    version="0.1.0",
+    version="0.2.0",
     author="Angel Yanguas-Gil",
     author_email="ayg@anl.gov",
     description="self-limited (ALD, ALE) reactive transport in nanostructures",
