@@ -235,6 +235,95 @@ def solve_ideal2(st, beta0, betarec=0, endmode="average", startav=None, endcov=0
         return np.array(dtl), np.array(cl)
 
 
+def dose_ideal(st, tdose, beta0, betarec=0, startav=None, ep=0.05,
+        verbose=True):
+
+    r"""
+    Return the surface coverage inside a structure after a dose of an ideal
+    self-limited process
+
+    The kinetic model is a first order irreversible Langmuir, where
+    molecules react with an available surface sites with a reaction
+    probability beta0. We can optionally define a coverage
+    independent recombination probability betarec.
+
+    The simulation uses normalized time using the impingement rate of gas phase
+    molecule into a single site as normalization units:
+
+    .. math::
+        \frac{1}{t_0}= \frac{1}{4} s_0 v_{th} \frac{p}{k_BT} s_0
+
+    Parameters
+    ----------
+
+    st : Structure
+        structure to be modeled
+    tdose : float
+        normalized dose time
+    beta0 : float
+        bare sticking probability for the self-limited process
+    betarec : float, optional
+        recombination probability
+    startav : numpy.array, optional
+        fraction of available sites at the beginning of the dose
+    ep : float, optional
+        maximum coverage variation allowed by the implicit method used to
+        solve the evolution of surface coverage.
+    verbose : bool, optional
+        if `true`, outputs intermediate steps to stdout
+
+    Returns
+    -------
+
+    Tuple(numpy.array)
+        returns a tuple containing the normalized times, the surface coverage
+        at every point of the feature and time, and, if `return_betaeff` is true,
+        the effective sticking probability.
+
+    """
+
+
+    surface_ids = [i for i in range(st.N) if i not in st.entrypoints]
+    nsurf = len(surface_ids)
+
+    if startav is None:
+        av = np.ones(nsurf)
+    else:
+        av = startav
+        assert(len(av)==nsurf)
+
+    dtl = []
+    cl = []
+    betaeffl = []
+    t = 0
+    s_areas = np.array([st.areas[i] for i in surface_ids])
+    totalarea = np.sum(s_areas)
+    entryarea = sum(st.areas[i] for i in st.entrypoints)
+
+    sav = np.sum(av*s_areas)/totalarea
+    nsav = np.sum(av*s_areas)/totalarea
+
+    while t < tdose:
+        betatot = beta0*av + betarec
+        sprobs = np.ones(st.N)
+        for i, k in enumerate(surface_ids):
+            sprobs[k] = betatot[i]
+        flux = ballistic_markov(sprobs, st, st.entrypoints)
+        fluxout = sum(flux[i] for i in st.entrypoints)
+        probs = np.array([flux[i] for i in surface_ids])
+        betaeff = 1-fluxout
+        persite = entryarea*beta0*probs/s_areas
+        maxp = np.amax(persite)
+        dt = ep/maxp
+        if t+dt > tdose:
+            dt = tdose-t
+        av = av/(1+persite*dt)
+        t += dt
+        nsav = np.sum(av*s_areas)/totalarea
+    return 1-av
+
+
+
 def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endmode="average",
     endcov=0.95, ep=0.05, wt=0.01, verbose=True, return_betaeff=False):
     r"""

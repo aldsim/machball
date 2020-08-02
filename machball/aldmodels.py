@@ -8,9 +8,10 @@ optional surface recombination pathway.
 """
 
 from .utils import vth, kB
-from .ballistic import solve_ideal
+from .ballistic import solve_ideal, dose_ideal
 
 import numpy as np
+
 
 class ALDIdeal:
     r"""Model for an ideal self-limited process
@@ -42,23 +43,74 @@ class ALDIdeal:
 
     """
 
-    def __init__(self, beta0, MM, T, p0, s0, betarec=0):
+    def __init__(self, beta0=1e-2, MM=150, T=473,
+            p0=1e2, s0=10e-19, betarec=0):
 
-        self.beta0 = beta0
-        self.MM = MM
-        self.T = T
-        self.p0 = p0
-        self.s0 = s0
+        self._beta0 = beta0
+        self._MM = MM
+        self._T = T
+        self._p0 = p0
+        self._s0 = s0
         self.betarec = betarec
 
         self._update()
-
 
     def _update(self):
 
         self.vth = vth(self.T, self.MM)
         self.n0 = self.p0/(kB*self.T)
         self.t0 = 1.0/(0.25*self.vth*self.n0*self.s0)
+
+    @property
+    def beta0(self):
+        return self._beta0
+
+    @beta0.setter
+    def beta0(self, beta0):
+        self._beta0 = beta0
+
+    @property
+    def MM(self):
+        return self._MM
+
+    @MM.setter
+    def MM(self, MM):
+        self._MM = MM
+        self._update()
+
+    @property
+    def T(self):
+        return self._T
+
+    @T.setter
+    def T(self, T):
+        self._T = T
+        self._update()
+
+    @property
+    def s0(self):
+        return self._s0
+
+    @s0.setter
+    def s0(self, s0):
+        self._s0 = s0
+        self._update()
+
+    @property
+    def p0(self):
+        return self._p0
+
+    @p0.setter
+    def p0(self, p0):
+        self._p0 = p0
+        self._update()
+
+    def dose(self, t, st=None):
+        if st is None:
+            return self.coverage_flat(t)
+        else:
+            return dose_ideal(st, t/self.t0, self.beta0,
+                self.betarec)
 
     def coverage_flat(self, t):
         """Return the surface coverage on a flat surface
@@ -97,6 +149,7 @@ class ALDIdeal:
         c = self.coverage_flat(t)
         return t, c
 
+
     def saturation_ballistic(self, st, endcov=0.95, verbose=True):
         """Calculate the evolution of the coverage profile inside a structure
 
@@ -119,7 +172,6 @@ class ALDIdeal:
 
         """
 
-        self._update()
         times, cov = solve_ideal(st, self.beta0, self.betarec, endcov=endcov,
             verbose=verbose)
         times = self.t0*times
