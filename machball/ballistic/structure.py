@@ -292,7 +292,6 @@ def create_trench(AR, Nseg):
     areas[-1] = Ai[-1]
     areas[1:-1] = Si
     areas = areas/areas[0]
-    print(areas)
     Ai = Ai/Ai[0]
 
     Fij = np.ones((Nseg+1,Nseg+1))
