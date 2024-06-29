@@ -150,10 +150,10 @@ def read_structure(filename, mode="pickle", areafile=None):
     elif mode == "numpy":
         data = np.loadtxt(filename)
         if areafile is None:
-            return Structure(data[:,0], data[:,1:])
+            return Feature(data[:,0], data[:,1:])
         else:
             areas = np.loadtxt(areafile)
-            return Structure(areas, data)
+            return Feature(areas, data)
     else:
         raise ValueError("mode %s not recognized" % mode)
 
@@ -182,7 +182,7 @@ class Via(Feature):
         N = Nz + 2
         regions = {"top":0, "bottom":(N-1), "wall":slice(1,N-1)}
         areas, qij = create_via(AR, Nz)
-        Structure.__init__(self, areas, qij, regions=regions)
+        Feature.__init__(self, areas, qij, regions=regions)
 
 
 class Trench(Feature):
@@ -209,7 +209,7 @@ class Trench(Feature):
         N = Nz + 2
         regions = {"top":0, "bottom":(N-1), "wall":slice(1,N-1)}
         areas, qij = create_trench(AR, Nz)
-        Structure.__init__(self, areas, qij, regions=regions)
+        Feature.__init__(self, areas, qij, regions=regions)
 
 
 
