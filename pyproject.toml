@@ -1,0 +1,26 @@
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "machball"
+authors = [
+{ name="Angel Yanguas-Gil"}]
+version = "0.2.0"
+description = "self-limited (ALD, ALE) reactive transport in nanostructures"
+readme = "README.md"
+keywords = ["atomic layer deposition", "microelectronics", "ALD", "ballistic transport",
+    "Markov Chains"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/aldsim/machball"
+
