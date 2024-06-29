@@ -1,7 +1,8 @@
 #Copyright 2013 Argonne UChicago LLC
 #This file is part of Machball
 
-from machball.ballistic import Via, save_structure, read_structure
+from machball.ballistic import Via
+from machball.structure import save_structure, read_structure
 
 st = Via(20, 40)
 

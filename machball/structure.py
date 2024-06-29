@@ -1,7 +1,7 @@
 #Copyright 2013 Argonne UChicago LLC
 #This file is part of Machball
 
-from . import viewfactors as vf
+from .ballistic import viewfactors as vf
 
 import numpy as np
 import pickle
