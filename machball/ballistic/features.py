@@ -6,7 +6,8 @@ from . import viewfactors as vf
 import numpy as np
 import pickle
 
-class Structure:
+
+class Feature:
     """Implement a geometrical feature as an array of areas and view factors.
 
     A Structure is just an array of areas and view factors. It
@@ -112,6 +113,7 @@ def save_structure(filename, st, mode="pickle", areafile=None):
     else:
         raise ValueError("mode %s not recognized" % mode)
 
+    
 
 def read_structure(filename, mode="pickle", areafile=None):
     """Read a Structure from file
@@ -156,7 +158,7 @@ def read_structure(filename, mode="pickle", areafile=None):
         raise ValueError("mode %s not recognized" % mode)
 
 
-class Via(Structure):
+class Via(Feature):
     """Implement a circular via
 
     A Via is composed of `Nz` + 2 elements, with the first and last elements
@@ -183,7 +185,7 @@ class Via(Structure):
         Structure.__init__(self, areas, qij, regions=regions)
 
 
-class Trench(Structure):
+class Trench(Feature):
     """Implement a rectangular trench
 
     A trench is composed of `Nz` + 2 elements, with the first and last
