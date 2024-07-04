@@ -63,12 +63,12 @@ def disk_to_disk(r, h):
     r2 = 4*r*r
     return r2/(1+np.sqrt(r2+1))**2
 
-def disk1_to_disk2(r1, r2, h):
-    r22 = r2*r2
-    r11 = r2*r1
-    d = 4*r22/r11
-    x = 1 + (h*h + r22)/(r11)
-    return d/(x + np.sqrt(x-d))
+def disk1_to_disk2(R1, R2, H):
+    r12 = (R1/H)**2
+    r22 = (R2/H)**2
+    x = 1 + 1/r12 + r22/r12
+    y = np.sqrt(x*x-4*r22/r12)
+    return 0.5*(x-y)
 
 def disk_to_shrinkcone(r1, h, tana):
     xi = h*tana/r1
