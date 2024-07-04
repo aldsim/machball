@@ -192,7 +192,7 @@ def create_via(AR, Nz):
     areas[1:(N-1)] = np.pi*dz
 
     for i in range(Nz):
-        qij[0,i+1] = vf.cylinderwall_to_disk(0.5, 0.5, i*dz, (i+1)*dz)
+        qij[0,i+1] = vf.cylinder_wall_to_disk(0.5, 0.5, i*dz, (i+1)*dz)
         qij[i+1,0] = areas[i+1]/areas[0]*qij[0,i+1]
         qij[N-2-i,-1] = qij[i+1,0]
         qij[-1,N-2-i] = qij[0,i+1]
@@ -200,11 +200,11 @@ def create_via(AR, Nz):
     qij[0,-1] = qij[-1,0]
 
     for i in range(Nz):
-        qij[i+1,i+1] = vf.cylinderwall_to_itself(0.5, dz)
+        qij[i+1,i+1] = vf.cylinder_wall_to_itself(0.5, dz)
 
     qdj = np.zeros(Nz-1)
     for i in range(Nz-1):
-        qdj[i] = vf.cylindersection_to_section(0.5, dz, i+1)
+        qdj[i] = vf.cylinder_section_to_section(0.5, dz, i+1)
 
     for i in range(Nz-1):
         for j in range(i+1,Nz):
