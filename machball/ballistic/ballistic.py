@@ -392,7 +392,7 @@ def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endmode="average",
     totalarea = np.sum(st.areas[1:])
     sav1 = np.sum(av1*st.areas[1:])/totalarea
     sav2 = np.sum(av2*st.areas[1:])/totalarea
-    sav = (1-f)*sav1 + f*sav2
+    sav = (1-f2)*sav1 + f2*sav2
 
     while np.amax(av1+av2) > endav:
         betaald1 = beta1*av1*(1-f2)
@@ -401,8 +401,8 @@ def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endmode="average",
         sprobs = np.ones(st.N)
         sprobs[1:] = betatot
         flux = ballistic_markov(sprobs, st, [0])
-        persite1 = (1-f)*st.areas[0]*beta1*flux[1:]/st.areas[1:]
-        persite2 = (1-f)*st.areas[0]*beta2*flux[1:]/st.areas[1:]
+        persite1 = (1-f2)*st.areas[0]*beta1*flux[1:]/st.areas[1:]
+        persite2 = (1-f2)*st.areas[0]*beta2*flux[1:]/st.areas[1:]
         maxp1 = np.amax(persite1)
         maxp2 = np.amax(persite2)
         dt = ep/max(maxp1, maxp2)
@@ -411,7 +411,7 @@ def evolve_slowsat(st, beta1, beta2, f2, betarec=0, endmode="average",
         t += dt
         nsav1 = np.sum(av1*st.areas[1:])/totalarea
         nsav2 = np.sum(av2*st.areas[1:])/totalarea
-        nsav = (1-f)*nsav1 + f*nsav2
+        nsav = (1-f2)*nsav1 + f2*nsav2
         if sav-nsav > wt:
             dtl.append(t)
             cl1.append(1-av1)
@@ -506,6 +506,6 @@ def ballistic_markov(sprobs, st, entrypoints, transients=True):
 
 if __name__ == "__main__":
 
-    from structure import Via
+    from .features import Via
     via = Via(10,20)
     solve_constant(via, 0.01)

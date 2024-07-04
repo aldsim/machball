@@ -23,12 +23,12 @@ class Structure:
         the view factor of section i from section j
     regions : dict of list of ints, optional
         a dictionary partitioning the structure into a series of regions
-    elements : iterable object, optional
+    coords : iterable object, optional
         a list of elements containing geometrical information on each structure
 
     """
 
-    def __init__(self, areas, qij, regions=None, coordinates=None):
+    def __init__(self, areas, qij, regions=None, coords=None):
         self.N = len(areas)
         self.areas = areas
         self.qij = qij
@@ -36,9 +36,13 @@ class Structure:
             self.regions = {'default':[i for i in range(self.N)]}
         else:
             self.regions = regions.copy()
+        self._coords = coords
 
     def region(self, name):
         return self.regions[name]
+    
+    def coords(self, name):
+        return self._coords[self.regions[name]]
     
     def save(self, filename, mode="pickle", areafile=None):
         return save_structure(filename, self, mode, areafile)
