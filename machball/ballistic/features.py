@@ -2,12 +2,13 @@
 #This file is part of Machball
 
 from . import viewfactors as vf
+from ..structure import Structure
 
 import numpy as np
 import pickle
 
 
-class Feature:
+class Feature(Structure):
     """Implement a geometrical feature as an array of areas and view factors.
 
     A Structure is just an array of areas and view factors. It
@@ -21,9 +22,9 @@ class Feature:
     qij : numpy.array
         2D array with the view factors for all the elements. qij[i,j] represents
         the view factor of section i from section j
-    entrypoints : list of ints, optional
-        a list containing the indices to entry points of the feature.
-        Defaults to 0.
+    entrypoints : list of ints or strings, optional
+        a list containing the indices or name of regions corresponding to entry points of
+        the feature. Defaults to 0.
     regions : dict of list of ints, optional
         a dictionary partitioning the structure into a series of regions
     coordinates : iterable object, optional
@@ -31,131 +32,78 @@ class Feature:
 
     """
 
-    def __init__(self, areas, qij, entrypoints=[0], regions=None, coordinates=None):
-        self.N = len(areas)
-        self.areas = areas
-        self.qij = qij
-        self.entrypoints = entrypoints
-        if regions is None:
-            self.regions = {}
-        else:
-            self.regions = regions.copy()
+    def __init__(self, areas, qij, entrypoints=[0], regions=None, coords=None):
+        super().__init__(areas, qij, regions, coords)
+        self.set_entrypoints(entrypoints)
+
+    def set_entrypoints(self, entrypoints):
+        elist = []
+        for el in entrypoints:
+            if el in self.regions:
+                elist.extend(self.regions[el])
+            else:
+                elist.append(el)
+
+        self._entrypoints = set(elist)
+        self._entryarea = sum([self.areas[i] for i in self.entrypoints])
+        self._growthsections = [i for i in range(self.N) if i not in self.entrypoints]
 
     @property
     def entrypoints(self):
         return self._entrypoints
-
-    @entrypoints.setter
-    def entrypoints(self, entrypoints):
-        self._entrypoints = entrypoints.copy()
-        self._growthsections = [i for i in range(self.N) if i not in self.entrypoints]
+    
+    @property
+    def entryarea(self):
+        return self._entryarea
 
     @property
     def growthsections(self):
         return self._growthsections
 
-    def region(self, name):
-        return self.regions[name]
-
     def get_p0(self, entrypoints=[], flux=None):
-        """Calculate the impingement probability from a series
+        """Calculate the starting probability from a series
         of entrypoints.
+
+        Parameters
+        ----------
+        entrypoints : list with entrypoints. Use default if empty
+
         """
 
         if entrypoints == []:
             entrypoints = self.entrypoints
         if flux is None:
-            flux = np.ones(len(entrypoints))
+            flux = {e:1.0 for e in entrypoints}
 
         p0 = np.zeros(self.N)
-        for f, i in zip(flux, entrypoints):
-            p0[i] = f*self.areas[i]
+        for el,f in flux.items():
+            p0[el] = f*self.areas[el]
         p0 /= sum(p0)
         return self.qij @ p0
 
 
-def save_structure(filename, st, mode="pickle", areafile=None):
-    """Save a structure to a file
+    def solve_markov(self, sprobs, flux=None):
+        Q = np.zeros((self.N,self.N))
 
-    There are two options: saving the structure as a pickle,
-    which retains all metadata (entrypoints, coordinates, regions),
-    or just the view factors and areas as numpy arrays. In this
-    second case, if areafile is provided the view factors and areas are
-    saved in different files. Otherwise, the areas are saved as a first
-    column of a NxN+1 array.
+        if not isinstance(sprobs, np.array):
+            probs = np.ones(self.N)
+            if isinstance(sprobs, dict):
+                probs = np.ones(self.N)
+                for k, v in sprobs.items():
+                    probs[k] = v
+            else:
+                for i in self.growthsections:
+                    probs[i] = sprobs
+            sprobs = probs
 
-    Parameters
-    ----------
-    filename : str
-        file name
-    st : Structure
-        the structure to be saved
-    mode : {'pickle', 'numpy'}
-        If "pickle" saves it as pickle.
-    areafile : str, optional
-        Optional additional filename for storing the areas
-        when saving as numpy array.
+        for i in range(self.N):
+            Q[:,i] = (1-sprobs[i])*self.qij[:,i]
 
-    """
-
-    if mode=="pickle":
-        with open(filename, "wb") as f:
-            pickle.dump(st, f)
-    elif mode=="numpy":
-        if areafile is None:
-            savedata = np.zeros((st.N, st.N+1))
-            savedata[:,1:] = st.qij
-            savedata[:,0] = st.areas
-            np.savetxt(filename, savedata)
-        else:
-            np.savetxt(filename, st.qij)
-            np.savetxt(areafile, st.areas)
-    else:
-        raise ValueError("mode %s not recognized" % mode)
-
-    
-
-def read_structure(filename, mode="pickle", areafile=None):
-    """Read a Structure from file
-
-    There are two options: reading the structure as a pickle or
-    as numpy arrays. In this
-    second case, if an optional areafile is provided the areas are
-    retrieved from that file. Otherwise, the areas are saved as a first
-    column of a NxN+1 array in filename.
-
-    Parameters
-    ----------
-
-    filename : str
-        file name
-    mode : {'pickle', 'numpy'}
-        If "pickle" saves it as pickle.
-    areafile : str, optional
-        Optional additional filename for storing the areas
-        when saving as numpy array.
-
-    Returns
-    -------
-
-    st : Structure
-        structure read from file
-
-    """
-
-    if mode == "pickle":
-        with open(filename, "rb") as f:
-            st = pickle.load(f)
-        return st
-    elif mode == "numpy":
-        data = np.loadtxt(filename)
-        if areafile is None:
-            return Feature(data[:,0], data[:,1:])
-        else:
-            areas = np.loadtxt(areafile)
-            return Feature(areas, data)
-    else:
-        raise ValueError("mode %s not recognized" % mode)
+        ImQ = np.identity(self.N) - Q
+        p0 = self.get_p0(self.entrypoints, flux)
+        ptrans = np.linalg.solve(ImQ, p0)
+        prob_outcome = sprobs * ptrans
+        return prob_outcome, ptrans, self.entryarea*prob_outcome/self.areas
 
 
 class Via(Feature):
@@ -181,9 +129,13 @@ class Via(Feature):
 
         N = Nz + 2
         regions = {"top":0, "bottom":(N-1), "wall":slice(1,N-1)}
+        coords = np.zeros(N)
+        coords[regions["wall"]] = AR/Nz*(0.5+np.arange(Nz))
+        coords[regions["top"]] = 0
+        coords[regions["bottom"]] = AR
+        
         areas, qij = create_via(AR, Nz)
-        Feature.__init__(self, areas, qij, regions=regions)
-
+        Feature.__init__(self, areas, qij, regions=regions, coords=coords)
 
 class Trench(Feature):
     """Implement a rectangular trench
@@ -394,6 +346,77 @@ def create_taperedvia(AR, dr, Nseg):
         Qij[i,i] = 1-np.sum(Qij[:,i])
 
     return areas, Qij
+
+
+def recper_to_cross(dh, W, n):
+    if n == 0:
+        Fwide = vf.rect_to_side(W, dh, 1.0)
+        Fside = vf.rect_to_side(1.0, dh, W)
+    else:
+        ya = (0, W)
+        yb = (0, W)
+        xa = (n*dh, (n+1)*dh)
+        zb = (0, 1)
+        Fwide = vf.perp_rec_to_rec(xa, ya, yb, zb)
+        ya = (0, 1)
+        yb = (0, 1)
+        xa = (n*dh, (n+1)*dh)
+        zb = (0, W)
+        Fside = vf.perp_rec_to_rec(xa, ya, yb, zb)
+    return (2*W*Fwide + 2*Fside)/(2*W+2)
+
+
+def create_rect(AR, W, Nseg):
+    """Return the areas and view factor of a rectangular trench, where
+    the vertical wall is divided into identical sections.
+
+    Parameters
+    ----------
+    AR : float
+        Aspect ratio, defined as the depth to height ratio
+    W : float
+        Normalized width, defined as the width to height ratio
+    Nseg : int
+        Number of vertical sections in the discretized wall
+
+    Returns
+    -------
+
+    (numpy.array, numpy.array)
+        Tuple with the areas (1D array), and view factors (2D array)
+
+    """
+
+    d0 = 1.0
+    dh = d0*AR/Nseg
+
+    Ai  = d0*W*np.ones(Nseg+1)
+    Si = (2*dh*W+2*dh)*np.ones(Nseg)
+
+    areas = np.zeros(Nseg+2)
+    areas[0] = Ai[0]
+    areas[-1] = Ai[-1]
+    areas[1:-1] = Si
+
+    F0 = []
+
+    for n in range(Nseg+1):
+        F0.append(recper_to_cross(dh, W, n))
+
+    Qij = np.zeros((Nseg+2, Nseg+2))
+    for i in range(1, Nseg+1):
+        for j in range(i+1, Nseg+1):
+            Qij[j,i] = F0[j-i-1]-F[j-i]
+            Qij[i,j] = Qij[j,i]
+        Qij[0,i] = F0[i]
+        Qij[i,0] = areas[i]*F0[i]/areas[0]
+        Qij[Nseg+1,i] = F0[Nseg-i]
+        Qij[i, Nseg+1] = areas[i]*F0[Nseg-i]/areas[0]
+        Qij[i,i] = 1 - np.sum(Qij[:,i])
+    Qij[-1, 0] = np.sum(Qij[1:-1,0])
+    Qij[0,-1] - Qij[-1,0]
+
+    return areas/areas[0], Qij
 
 
 if __name__ == "__main__":
