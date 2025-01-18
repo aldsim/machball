@@ -1,4 +1,4 @@
-#Copyright 2013 Argonne UChicago LLC
+#Copyright 2013-2025 Argonne UChicago LLC
 #This file is part of Machball
 """
 This module contains a few utility functions and constants that are used
@@ -31,6 +31,7 @@ molecularmasses = {
     "ZnO": 81.41,
 }
 """Mass in mols per gram"""
+
 
 def sitearea(M, density, gpc, nmol=1):
     """Average area of a surface site

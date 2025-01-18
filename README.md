@@ -5,6 +5,11 @@ inside high aspect ratio and nanostructured materials for
 self-limited processes such as atomic layer deposition (ALD)
 and atomic layer etching (ALE).
 
+It predicts conformality based on the underlying surface kinetics
+and process parameters such as the precursor pressure and the
+dose time. It models precursor transport under Knudsen flow conditions using
+a ballistic transport models based on random re-emission statistics.
+
 # Documentation
 
 Machball's documentation can be found under docs and in
@@ -64,7 +69,7 @@ Laboratory Directed Research and Development program.
 
 # Copyright and license
 
-Copyright (2013), UChicago Argonne, LLC
+Copyright (2013-2025), UChicago Argonne, LLC
 
 Machball is distributed under the terms of the BSD License. A
 copy of the license can be found [here](https://github.com/aldsim/machball/blob/master/LICENSE)

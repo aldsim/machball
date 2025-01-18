@@ -1,4 +1,4 @@
-#Copyright 2013 Argonne UChicago LLC
+#Copyright 2013-2025 Argonne UChicago LLC
 #This file is part of Machball
 
 from .ballistic import viewfactors as vf
